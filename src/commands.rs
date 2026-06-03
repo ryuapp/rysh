@@ -6,6 +6,7 @@ mod cd;
 mod echo;
 mod environment;
 mod exit;
+mod introspection;
 mod pwd;
 mod source;
 mod status;
@@ -55,11 +56,13 @@ pub(crate) fn run(
 ) -> Result<Option<BuiltinResult>> {
     let result = match name {
         "cd" => cd::run(shell, argv)?,
+        "command" => introspection::command(shell, argv),
         "pwd" => pwd::run()?,
         "exit" => exit::run(argv),
         "export" => environment::export(shell, argv, env_overlay),
         "unset" => environment::unset(shell, argv),
         "set" => environment::set(shell)?,
+        "type" => introspection::type_(shell, argv),
         "true" => status::true_(),
         "false" => status::false_(),
         "echo" => echo::run(argv)?,
@@ -68,4 +71,22 @@ pub(crate) fn run(
     };
 
     Ok(Some(result))
+}
+
+pub(crate) fn is_builtin(name: &str) -> bool {
+    matches!(
+        name,
+        "." | "cd"
+            | "command"
+            | "echo"
+            | "exit"
+            | "export"
+            | "false"
+            | "pwd"
+            | "set"
+            | "source"
+            | "true"
+            | "type"
+            | "unset"
+    )
 }

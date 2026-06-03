@@ -1,6 +1,6 @@
 use crate::terminal::LineRead;
 use anyhow::Result;
-use std::io::{self, Write};
+use std::io::{self, ErrorKind, Write};
 
 pub struct Terminal {
     line: String,
@@ -18,9 +18,17 @@ impl Terminal {
         io::stdout().flush()?;
 
         self.line.clear();
-        if io::stdin().read_line(&mut self.line)? == 0 {
-            println!();
-            return Ok(LineRead::Eof);
+        match io::stdin().read_line(&mut self.line) {
+            Ok(0) => {
+                println!();
+                return Ok(LineRead::Eof);
+            }
+            Ok(_) => {}
+            Err(err) if err.kind() == ErrorKind::Interrupted => {
+                println!("^C");
+                return Ok(LineRead::Interrupted);
+            }
+            Err(err) => return Err(err.into()),
         }
 
         Ok(LineRead::Line(

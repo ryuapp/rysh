@@ -14,3 +14,13 @@ pub enum LineRead {
 pub use fallback::Terminal;
 #[cfg(windows)]
 pub use windows::Terminal;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn line_read_interrupted_variant_is_available() {
+        assert_eq!(LineRead::Interrupted, LineRead::Interrupted);
+    }
+}

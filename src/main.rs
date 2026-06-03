@@ -1,7 +1,10 @@
 use anyhow::{Context, Result};
 use rysh::{RunOptions, Shell};
 use std::env;
-use std::io::{self, Write};
+
+mod terminal;
+
+use terminal::{LineRead, Terminal};
 
 fn main() {
     match run() {
@@ -34,24 +37,26 @@ fn run() -> Result<i32> {
 }
 
 fn repl(mut shell: Shell) -> Result<i32> {
-    let stdin = io::stdin();
-    let mut line = String::new();
+    let mut terminal = Terminal::new()?;
+
+    println!("rysh is coming...");
+    #[cfg(not(windows))]
+    println!("NOTE: rysh is only tuned for Windows.");
 
     loop {
-        print!("{}> ", rysh::display_path_for_cli(&env::current_dir()?));
-        io::stdout().flush()?;
+        let prompt = format!("{}> ", rysh::display_path_for_cli(&env::current_dir()?));
+        let line = match terminal.read_line(&prompt)? {
+            LineRead::Line(line) => line,
+            LineRead::Interrupted => continue,
+            LineRead::Eof => return Ok(0),
+        };
 
-        line.clear();
-        if stdin.read_line(&mut line)? == 0 {
-            println!();
-            return Ok(0);
-        }
-
-        let trimmed = line.trim_end_matches(['\r', '\n']);
-        if trimmed.is_empty() {
+        if !line.is_empty()
+            && let Err(err) = shell.run_script(&line, RunOptions::default())
+        {
+            eprintln!("rysh: {err:#}");
             continue;
         }
-        shell.run_script(trimmed, RunOptions::default())?;
         if let Some(status) = shell.take_exit_status() {
             return Ok(status);
         }

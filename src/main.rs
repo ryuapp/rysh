@@ -21,7 +21,7 @@ fn run() -> Result<()> {
             std::process::exit(status);
         }
         Some(path) => {
-            let source = std::fs::read_to_string(path)
+            let source = std::fs::read_to_string(rysh::path_for_cli(path))
                 .with_context(|| format!("failed to read script {path}"))?;
             let status = shell.run_script(&source, RunOptions::default())?;
             std::process::exit(status);
@@ -35,7 +35,7 @@ fn repl(mut shell: Shell) -> Result<()> {
     let mut line = String::new();
 
     loop {
-        print!("{}> ", env::current_dir()?.display());
+        print!("{}> ", rysh::display_path_for_cli(&env::current_dir()?));
         io::stdout().flush()?;
 
         line.clear();
@@ -48,9 +48,6 @@ fn repl(mut shell: Shell) -> Result<()> {
         if trimmed.is_empty() {
             continue;
         }
-        let status = shell.run_script(trimmed, RunOptions { interactive: true })?;
-        if status != 0 {
-            eprintln!("status {status}");
-        }
+        shell.run_script(trimmed, RunOptions::default())?;
     }
 }

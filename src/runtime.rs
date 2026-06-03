@@ -1,4 +1,5 @@
 use crate::parser::{Command as AstCommand, ListItem, Pipeline, RedirectKind, Word, parse};
+use crate::path::{display_path, is_explicit_path, shell_path};
 use anyhow::{Context, Result, bail};
 use std::collections::HashMap;
 use std::env;
@@ -8,9 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 #[derive(Debug, Clone, Default)]
-pub struct RunOptions {
-    pub interactive: bool,
-}
+pub struct RunOptions {}
 
 #[derive(Debug)]
 pub struct Shell {
@@ -161,16 +160,16 @@ impl Shell {
                     .or_else(|| self.vars.get("HOME").cloned())
                     .or_else(|| self.vars.get("USERPROFILE").cloned())
                     .context("cd: missing destination and HOME/USERPROFILE is unset")?;
-                match env::set_current_dir(&target) {
+                match env::set_current_dir(shell_path(&target)) {
                     Ok(()) => 0,
                     Err(err) => {
-                        writeln!(stderr, "cd: {target}: {err}")?;
+                        writeln!(stderr, "cd: {err}")?;
                         1
                     }
                 }
             }
             "pwd" => {
-                writeln!(stdout, "{}", env::current_dir()?.display())?;
+                writeln!(stdout, "{}", display_path(&env::current_dir()?))?;
                 0
             }
             "exit" => {
@@ -215,7 +214,7 @@ impl Shell {
             }
             "." | "source" => {
                 let path = argv.first().context(".: missing script path")?;
-                let source = std::fs::read_to_string(path)
+                let source = std::fs::read_to_string(shell_path(path))
                     .with_context(|| format!("failed to read script {}", path))?;
                 self.run_script(&source, RunOptions::default())?
             }
@@ -511,7 +510,7 @@ fn redirect_path(
 
 fn expand_redirect_target(target: Option<&Word>, shell: &Shell) -> Result<PathBuf> {
     let target = target.context("redirect target missing")?;
-    Ok(PathBuf::from(shell.expand_word(target)?))
+    Ok(shell_path(&shell.expand_word(target)?))
 }
 
 fn open_output(path: PathBuf, append: bool) -> Result<File> {
@@ -525,8 +524,8 @@ fn open_output(path: PathBuf, append: bool) -> Result<File> {
 
 fn resolve_program(name: &str, vars: &HashMap<String, String>) -> Result<PathBuf> {
     let path = Path::new(name);
-    if path.components().count() > 1 {
-        return Ok(path.to_path_buf());
+    if is_explicit_path(name) || path.components().count() > 1 {
+        return Ok(shell_path(name));
     }
 
     let paths = vars
@@ -599,5 +598,46 @@ mod tests {
                 .unwrap(),
             0
         );
+    }
+
+    #[test]
+    fn cd_accepts_msys_drive_path() {
+        let current_dir = env::current_dir().unwrap();
+        let drive = current_dir
+            .display()
+            .to_string()
+            .chars()
+            .next()
+            .unwrap()
+            .to_ascii_lowercase();
+        let mut shell = Shell::new();
+
+        assert_eq!(
+            shell
+                .run_script(&format!("cd /{drive}/"), RunOptions::default())
+                .unwrap(),
+            0
+        );
+    }
+
+    #[test]
+    fn failed_cd_does_not_execute_argument_as_command() {
+        let mut shell = Shell::new();
+        let (status, stdout) = shell
+            .run_script_capture(&format!("cd echo 2> {}", null_device()))
+            .unwrap();
+
+        assert_eq!(status, 1);
+        assert!(stdout.is_empty());
+    }
+
+    #[cfg(windows)]
+    fn null_device() -> &'static str {
+        "NUL"
+    }
+
+    #[cfg(not(windows))]
+    fn null_device() -> &'static str {
+        "/dev/null"
     }
 }

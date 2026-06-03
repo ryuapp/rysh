@@ -32,6 +32,7 @@ fn supports_command_substitution() {
     assert_eq!(String::from_utf8_lossy(&output.stdout), "inner\n");
 }
 
+#[cfg(windows)]
 #[test]
 fn runs_script_from_msys_style_drive_path() {
     let script = std::env::temp_dir().join("rysh-msys-path-test.sh");

@@ -600,6 +600,7 @@ mod tests {
         );
     }
 
+    #[cfg(windows)]
     #[test]
     fn cd_accepts_msys_drive_path() {
         let current_dir = env::current_dir().unwrap();

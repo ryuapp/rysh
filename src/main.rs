@@ -44,7 +44,7 @@ fn repl(mut shell: Shell) -> Result<i32> {
     println!("NOTE: shell is only tuned for Windows.");
 
     loop {
-        let prompt = format!("{}> ", shell::display_path_for_cli(&env::current_dir()?));
+        let prompt = format!("{}> ", env::current_dir()?.display());
         let line = match terminal.read_line(&prompt)? {
             LineRead::Line(line) => line,
             LineRead::Interrupted => continue,

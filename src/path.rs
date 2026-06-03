@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 pub(crate) fn shell_path(path: &str) -> PathBuf {
     #[cfg(windows)]
@@ -12,10 +12,6 @@ pub(crate) fn shell_path(path: &str) -> PathBuf {
 pub(crate) fn is_explicit_path(path: &str) -> bool {
     let path = path.replace('\\', "/");
     path.contains('/') || windows_drive_prefix(&path)
-}
-
-pub(crate) fn display_path(path: &Path) -> String {
-    path.display().to_string().replace('\\', "/")
 }
 
 #[cfg(windows)]

@@ -31,3 +31,35 @@ fn supports_command_substitution() {
     assert!(output.status.success());
     assert_eq!(String::from_utf8_lossy(&output.stdout), "inner\n");
 }
+
+#[cfg(windows)]
+#[test]
+fn runs_script_from_msys_style_drive_path() {
+    let script = std::env::temp_dir().join("rysh-msys-path-test.sh");
+    std::fs::write(&script, "echo script\n").unwrap();
+    let script = script.display().to_string().replace('\\', "/");
+    let script = format!(
+        "/{}/{}",
+        script[..1].to_ascii_lowercase(),
+        script[3..].trim_start_matches('/')
+    );
+
+    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
+        .arg(script)
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "script\n");
+}
+
+#[test]
+fn failed_cd_does_not_run_argument_as_command() {
+    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
+        .args(["-c", "cd echo"])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+}

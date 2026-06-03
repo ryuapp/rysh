@@ -4,13 +4,16 @@ use std::env;
 use std::io::{self, Write};
 
 fn main() {
-    if let Err(err) = run() {
-        eprintln!("rysh: {err:#}");
-        std::process::exit(1);
+    match run() {
+        Ok(status) => std::process::exit(status),
+        Err(err) => {
+            eprintln!("rysh: {err:#}");
+            std::process::exit(1);
+        }
     }
 }
 
-fn run() -> Result<()> {
+fn run() -> Result<i32> {
     let mut args = env::args().skip(1);
     let mut shell = Shell::new();
 
@@ -18,19 +21,19 @@ fn run() -> Result<()> {
         Some("-c") => {
             let source = args.next().context("missing command after -c")?;
             let status = shell.run_script(&source, RunOptions::default())?;
-            std::process::exit(status);
+            Ok(status)
         }
         Some(path) => {
             let source = std::fs::read_to_string(rysh::path_for_cli(path))
                 .with_context(|| format!("failed to read script {path}"))?;
             let status = shell.run_script(&source, RunOptions::default())?;
-            std::process::exit(status);
+            Ok(status)
         }
         None => repl(shell),
     }
 }
 
-fn repl(mut shell: Shell) -> Result<()> {
+fn repl(mut shell: Shell) -> Result<i32> {
     let stdin = io::stdin();
     let mut line = String::new();
 
@@ -41,7 +44,7 @@ fn repl(mut shell: Shell) -> Result<()> {
         line.clear();
         if stdin.read_line(&mut line)? == 0 {
             println!();
-            return Ok(());
+            return Ok(0);
         }
 
         let trimmed = line.trim_end_matches(['\r', '\n']);
@@ -49,5 +52,8 @@ fn repl(mut shell: Shell) -> Result<()> {
             continue;
         }
         shell.run_script(trimmed, RunOptions::default())?;
+        if let Some(status) = shell.take_exit_status() {
+            return Ok(status);
+        }
     }
 }

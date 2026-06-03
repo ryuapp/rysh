@@ -16,6 +16,7 @@ pub(crate) struct BuiltinResult {
     pub status: i32,
     pub stdout: Vec<u8>,
     pub stderr: Vec<u8>,
+    pub exit: bool,
 }
 
 impl BuiltinResult {
@@ -28,6 +29,7 @@ impl BuiltinResult {
             status,
             stdout: Vec::new(),
             stderr: Vec::new(),
+            exit: false,
         }
     }
 
@@ -36,6 +38,7 @@ impl BuiltinResult {
             status,
             stdout,
             stderr: Vec::new(),
+            exit: false,
         }
     }
 
@@ -44,6 +47,16 @@ impl BuiltinResult {
             status,
             stdout: Vec::new(),
             stderr,
+            exit: false,
+        }
+    }
+
+    fn exit(status: i32) -> Self {
+        Self {
+            status,
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+            exit: true,
         }
     }
 }

@@ -5,5 +5,5 @@ pub(crate) fn run(argv: &[String]) -> BuiltinResult {
         .first()
         .and_then(|s| s.parse::<i32>().ok())
         .unwrap_or(0);
-    BuiltinResult::status(code)
+    BuiltinResult::exit(code)
 }

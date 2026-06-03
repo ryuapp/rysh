@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use rysh::{RunOptions, Shell};
+use shell::{RunOptions, Shell};
 use std::env;
 
 mod terminal;
@@ -10,7 +10,7 @@ fn main() {
     match run() {
         Ok(status) => std::process::exit(status),
         Err(err) => {
-            eprintln!("rysh: {err:#}");
+            eprintln!("shell: {err:#}");
             std::process::exit(1);
         }
     }
@@ -27,7 +27,7 @@ fn run() -> Result<i32> {
             Ok(status)
         }
         Some(path) => {
-            let source = std::fs::read_to_string(rysh::path_for_cli(path))
+            let source = std::fs::read_to_string(shell::path_for_cli(path))
                 .with_context(|| format!("failed to read script {path}"))?;
             let status = shell.run_script(&source, RunOptions::default())?;
             Ok(status)
@@ -39,12 +39,12 @@ fn run() -> Result<i32> {
 fn repl(mut shell: Shell) -> Result<i32> {
     let mut terminal = Terminal::new()?;
 
-    println!("rysh is coming...");
+    println!("shell is coming...");
     #[cfg(not(windows))]
-    println!("NOTE: rysh is only tuned for Windows.");
+    println!("NOTE: shell is only tuned for Windows.");
 
     loop {
-        let prompt = format!("{}> ", rysh::display_path_for_cli(&env::current_dir()?));
+        let prompt = format!("{}> ", shell::display_path_for_cli(&env::current_dir()?));
         let line = match terminal.read_line(&prompt)? {
             LineRead::Line(line) => line,
             LineRead::Interrupted => continue,
@@ -54,7 +54,7 @@ fn repl(mut shell: Shell) -> Result<i32> {
         if !line.is_empty()
             && let Err(err) = shell.run_script(&line, RunOptions::default())
         {
-            eprintln!("rysh: {err:#}");
+            eprintln!("shell: {err:#}");
             continue;
         }
         if let Some(status) = shell.take_exit_status() {

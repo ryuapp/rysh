@@ -1,4 +1,4 @@
-# rysh
+# shell
 
 A minimal shell written in Rust.
 

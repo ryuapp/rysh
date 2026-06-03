@@ -1,16 +1,17 @@
 [package]
-name = "rysh"
+name = "shell"
 version = "0.1.0"
 edition = "2024"
 license = "MIT-0"
-repository = "https://github.com/ryuapp/rysh"
+publish = false
+repository = "https://github.com/ryuapp/shell"
 
 [lib]
-name = "rysh"
+name = "shell"
 path = "src/lib.rs"
 
 [[bin]]
-name = "rysh"
+name = "shell"
 path = "src/main.rs"
 
 [dependencies]

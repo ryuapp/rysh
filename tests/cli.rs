@@ -2,7 +2,7 @@ use std::process::Command;
 
 #[test]
 fn runs_inline_command() {
-    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
+    let output = Command::new(env!("CARGO_BIN_EXE_shell"))
         .args(["-c", "echo hello"])
         .output()
         .unwrap();
@@ -13,7 +13,7 @@ fn runs_inline_command() {
 
 #[test]
 fn propagates_exit_status() {
-    let status = Command::new(env!("CARGO_BIN_EXE_rysh"))
+    let status = Command::new(env!("CARGO_BIN_EXE_shell"))
         .args(["-c", "false"])
         .status()
         .unwrap();
@@ -23,7 +23,7 @@ fn propagates_exit_status() {
 
 #[test]
 fn supports_command_substitution() {
-    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
+    let output = Command::new(env!("CARGO_BIN_EXE_shell"))
         .args(["-c", "echo $(echo inner)"])
         .output()
         .unwrap();
@@ -35,7 +35,7 @@ fn supports_command_substitution() {
 #[cfg(windows)]
 #[test]
 fn runs_script_from_msys_style_drive_path() {
-    let script = std::env::temp_dir().join("rysh-msys-path-test.sh");
+    let script = std::env::temp_dir().join("shell-msys-path-test.sh");
     std::fs::write(&script, "echo script\n").unwrap();
     let script = script.display().to_string().replace('\\', "/");
     let script = format!(
@@ -44,7 +44,7 @@ fn runs_script_from_msys_style_drive_path() {
         script[3..].trim_start_matches('/')
     );
 
-    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
+    let output = Command::new(env!("CARGO_BIN_EXE_shell"))
         .arg(script)
         .output()
         .unwrap();
@@ -55,7 +55,7 @@ fn runs_script_from_msys_style_drive_path() {
 
 #[test]
 fn failed_cd_does_not_run_argument_as_command() {
-    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
+    let output = Command::new(env!("CARGO_BIN_EXE_shell"))
         .args(["-c", "cd echo"])
         .output()
         .unwrap();
@@ -66,8 +66,8 @@ fn failed_cd_does_not_run_argument_as_command() {
 
 #[test]
 fn command_v_reports_builtins_and_missing_commands() {
-    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
-        .args(["-c", "command -v cd definitely_missing_rysh_command"])
+    let output = Command::new(env!("CARGO_BIN_EXE_shell"))
+        .args(["-c", "command -v cd definitely_missing_shell_command"])
         .output()
         .unwrap();
 
@@ -77,7 +77,7 @@ fn command_v_reports_builtins_and_missing_commands() {
 
 #[test]
 fn type_reports_builtins() {
-    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
+    let output = Command::new(env!("CARGO_BIN_EXE_shell"))
         .args(["-c", "type cd"])
         .output()
         .unwrap();
@@ -91,7 +91,7 @@ fn type_reports_builtins() {
 
 #[test]
 fn exit_stops_following_commands_and_sets_status() {
-    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
+    let output = Command::new(env!("CARGO_BIN_EXE_shell"))
         .args(["-c", "exit 7; echo no"])
         .output()
         .unwrap();

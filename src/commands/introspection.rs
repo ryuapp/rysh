@@ -1,5 +1,4 @@
 use crate::commands::{BuiltinResult, is_builtin};
-use crate::path::display_path;
 use crate::runtime::Shell;
 
 pub(crate) fn command(shell: &Shell, argv: &[String]) -> BuiltinResult {
@@ -26,7 +25,7 @@ pub(crate) fn type_(shell: &Shell, argv: &[String]) -> BuiltinResult {
         if is_builtin(name) {
             stdout.extend_from_slice(format!("{name} is a shell builtin\n").as_bytes());
         } else if let Some(path) = shell.resolve_program(name) {
-            stdout.extend_from_slice(format!("{name} is {}\n", display_path(&path)).as_bytes());
+            stdout.extend_from_slice(format!("{name} is {}\n", path.display()).as_bytes());
         } else {
             status = 1;
             stderr.extend_from_slice(format!("type: {name}: not found\n").as_bytes());
@@ -49,7 +48,7 @@ fn command_v(shell: &Shell, names: &[String]) -> BuiltinResult {
         if is_builtin(name) {
             stdout.extend_from_slice(format!("{name}\n").as_bytes());
         } else if let Some(path) = shell.resolve_program(name) {
-            stdout.extend_from_slice(format!("{}\n", display_path(&path)).as_bytes());
+            stdout.extend_from_slice(format!("{}\n", path.display()).as_bytes());
         } else {
             status = 1;
         }

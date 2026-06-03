@@ -14,14 +14,23 @@ impl Word {
     }
 }
 
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) enum ParseError {
-    #[error("unterminated quote")]
     UnterminatedQuote,
-    #[error("expected command after operator")]
     ExpectedCommand,
-    #[error("expected redirect target")]
     ExpectedRedirectTarget,
-    #[error("unexpected token: {0}")]
     UnexpectedToken(String),
 }
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnterminatedQuote => write!(f, "unterminated quote"),
+            Self::ExpectedCommand => write!(f, "expected command after operator"),
+            Self::ExpectedRedirectTarget => write!(f, "expected redirect target"),
+            Self::UnexpectedToken(token) => write!(f, "unexpected token: {token}"),
+        }
+    }
+}
+
+impl std::error::Error for ParseError {}

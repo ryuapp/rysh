@@ -1,5 +1,6 @@
+use crate::commands;
 use crate::parser::{Command as AstCommand, ListItem, Pipeline, RedirectKind, Word, parse};
-use crate::path::{display_path, is_explicit_path, shell_path};
+use crate::path::{is_explicit_path, shell_path};
 use anyhow::{Context, Result, bail};
 use std::collections::HashMap;
 use std::env;
@@ -13,7 +14,7 @@ pub struct RunOptions {}
 
 #[derive(Debug)]
 pub struct Shell {
-    vars: HashMap<String, String>,
+    pub(crate) vars: HashMap<String, String>,
     last_status: i32,
 }
 
@@ -150,79 +151,15 @@ impl Shell {
         command: &AstCommand,
         capture_stdout: bool,
     ) -> Result<Option<CommandOutput>> {
-        let mut stdout = Vec::new();
-        let mut stderr = Vec::new();
-        let status = match name {
-            "cd" => {
-                let target = argv
-                    .first()
-                    .cloned()
-                    .or_else(|| self.vars.get("HOME").cloned())
-                    .or_else(|| self.vars.get("USERPROFILE").cloned())
-                    .context("cd: missing destination and HOME/USERPROFILE is unset")?;
-                match env::set_current_dir(shell_path(&target)) {
-                    Ok(()) => 0,
-                    Err(err) => {
-                        writeln!(stderr, "cd: {err}")?;
-                        1
-                    }
-                }
-            }
-            "pwd" => {
-                writeln!(stdout, "{}", display_path(&env::current_dir()?))?;
-                0
-            }
-            "exit" => {
-                let code = argv
-                    .first()
-                    .and_then(|s| s.parse::<i32>().ok())
-                    .unwrap_or(0);
-                return Ok(Some(CommandOutput {
-                    status: code,
-                    stdout,
-                }));
-            }
-            "export" => {
-                for arg in argv {
-                    if let Some((name, value)) = arg.split_once('=') {
-                        self.vars.insert(name.to_string(), value.to_string());
-                    } else if let Some(value) = env_overlay.get(arg).cloned() {
-                        self.vars.insert(arg.to_string(), value);
-                    }
-                }
-                0
-            }
-            "unset" => {
-                for arg in argv {
-                    self.vars.remove(arg);
-                }
-                0
-            }
-            "set" => {
-                let mut pairs: Vec<_> = self.vars.iter().collect();
-                pairs.sort_by(|a, b| a.0.cmp(b.0));
-                for (key, value) in pairs {
-                    writeln!(stdout, "{key}={value}")?;
-                }
-                0
-            }
-            "true" => 0,
-            "false" => 1,
-            "echo" => {
-                writeln!(stdout, "{}", argv.join(" "))?;
-                0
-            }
-            "." | "source" => {
-                let path = argv.first().context(".: missing script path")?;
-                let source = std::fs::read_to_string(shell_path(path))
-                    .with_context(|| format!("failed to read script {}", path))?;
-                self.run_script(&source, RunOptions::default())?
-            }
-            _ => return Ok(None),
+        let Some(result) = commands::run(self, name, argv, env_overlay)? else {
+            return Ok(None);
         };
 
-        write_builtin_streams(command, capture_stdout, &stdout, &stderr)?;
-        Ok(Some(CommandOutput { status, stdout }))
+        write_builtin_streams(command, capture_stdout, &result.stdout, &result.stderr)?;
+        Ok(Some(CommandOutput {
+            status: result.status,
+            stdout: result.stdout,
+        }))
     }
 
     fn run_external(

@@ -63,3 +63,28 @@ fn failed_cd_does_not_run_argument_as_command() {
     assert_eq!(output.status.code(), Some(1));
     assert!(output.stdout.is_empty());
 }
+
+#[test]
+fn command_v_reports_builtins_and_missing_commands() {
+    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
+        .args(["-c", "command -v cd definitely_missing_rysh_command"])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "cd\n");
+}
+
+#[test]
+fn type_reports_builtins() {
+    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
+        .args(["-c", "type cd"])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "cd is a shell builtin\n"
+    );
+}

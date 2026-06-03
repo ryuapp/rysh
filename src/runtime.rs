@@ -73,6 +73,10 @@ impl Shell {
         Ok((status, stdout))
     }
 
+    pub(crate) fn resolve_program(&self, name: &str) -> Option<PathBuf> {
+        resolve_program(name, &self.vars).ok()
+    }
+
     fn run_pipeline(&mut self, pipeline: &Pipeline) -> Result<i32> {
         Ok(self.run_pipeline_inner(pipeline, false)?.status)
     }

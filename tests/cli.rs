@@ -88,3 +88,14 @@ fn type_reports_builtins() {
         "cd is a shell builtin\n"
     );
 }
+
+#[test]
+fn exit_stops_following_commands_and_sets_status() {
+    let output = Command::new(env!("CARGO_BIN_EXE_rysh"))
+        .args(["-c", "exit 7; echo no"])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(7));
+    assert!(output.stdout.is_empty());
+}

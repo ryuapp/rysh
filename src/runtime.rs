@@ -16,6 +16,7 @@ pub struct RunOptions {}
 pub struct Shell {
     pub(crate) vars: HashMap<String, String>,
     last_status: i32,
+    exit_status: Option<i32>,
 }
 
 impl Default for Shell {
@@ -29,6 +30,7 @@ impl Shell {
         Self {
             vars: env::vars().collect(),
             last_status: 0,
+            exit_status: None,
         }
     }
 
@@ -45,6 +47,9 @@ impl Shell {
             if should_run {
                 status = self.run_pipeline(&pipeline)?;
                 self.last_status = status;
+                if self.exit_status.is_some() {
+                    break;
+                }
             }
         }
 
@@ -67,6 +72,9 @@ impl Shell {
                 status = output.status;
                 stdout.extend(output.stdout);
                 self.last_status = status;
+                if self.exit_status.is_some() {
+                    break;
+                }
             }
         }
 
@@ -75,6 +83,10 @@ impl Shell {
 
     pub(crate) fn resolve_program(&self, name: &str) -> Option<PathBuf> {
         resolve_program(name, &self.vars).ok()
+    }
+
+    pub fn take_exit_status(&mut self) -> Option<i32> {
+        self.exit_status.take()
     }
 
     fn run_pipeline(&mut self, pipeline: &Pipeline) -> Result<i32> {
@@ -101,13 +113,20 @@ impl Shell {
             let is_last = idx + 1 == pipeline.commands.len();
             let output = self.run_command(command, input.take(), !is_last || capture_stdout)?;
             status = output.status;
+            if output.exit {
+                return Ok(output);
+            }
             if is_last {
                 stdout = output.stdout;
             } else {
                 input = Some(output.stdout);
             }
         }
-        Ok(CommandOutput { status, stdout })
+        Ok(CommandOutput {
+            status,
+            stdout,
+            exit: false,
+        })
     }
 
     fn run_command(
@@ -160,9 +179,13 @@ impl Shell {
         };
 
         write_builtin_streams(command, capture_stdout, &result.stdout, &result.stderr)?;
+        if result.exit {
+            self.exit_status = Some(result.status);
+        }
         Ok(Some(CommandOutput {
             status: result.status,
             stdout: result.stdout,
+            exit: result.exit,
         }))
     }
 
@@ -210,6 +233,7 @@ impl Shell {
         Ok(CommandOutput {
             status: output.status.code().unwrap_or(1),
             stdout: output.stdout,
+            exit: false,
         })
     }
 
@@ -294,6 +318,7 @@ impl Shell {
         Self {
             vars: self.vars.clone(),
             last_status: self.last_status,
+            exit_status: None,
         }
     }
 }
@@ -503,6 +528,7 @@ fn resolve_program(name: &str, vars: &HashMap<String, String>) -> Result<PathBuf
 struct CommandOutput {
     status: i32,
     stdout: Vec<u8>,
+    exit: bool,
 }
 
 impl CommandOutput {
@@ -510,6 +536,7 @@ impl CommandOutput {
         Self {
             status,
             stdout: Vec::new(),
+            exit: false,
         }
     }
 }
@@ -539,6 +566,16 @@ mod tests {
                 .unwrap(),
             0
         );
+    }
+
+    #[test]
+    fn exit_stops_following_commands() {
+        let mut shell = Shell::new();
+        let (status, stdout) = shell.run_script_capture("exit 7; echo no").unwrap();
+
+        assert_eq!(status, 7);
+        assert_eq!(shell.take_exit_status(), Some(7));
+        assert!(stdout.is_empty());
     }
 
     #[cfg(windows)]

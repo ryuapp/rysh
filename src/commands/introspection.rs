@@ -37,6 +37,7 @@ pub(crate) fn type_(shell: &Shell, argv: &[String]) -> BuiltinResult {
         status,
         stdout,
         stderr,
+        exit: false,
     }
 }
 
@@ -58,5 +59,6 @@ fn command_v(shell: &Shell, names: &[String]) -> BuiltinResult {
         status,
         stdout,
         stderr: Vec::new(),
+        exit: false,
     }
 }

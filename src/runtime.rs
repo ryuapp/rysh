@@ -508,14 +508,36 @@ fn resolve_program(name: &str, vars: &HashMap<String, String>) -> Result<PathBuf
 
     for dir in env::split_paths(&paths) {
         let candidate = dir.join(name);
-        if candidate.is_file() {
-            return Ok(candidate);
-        }
-        if !has_ext {
-            for ext in &exts {
-                let candidate = dir.join(format!("{name}{ext}"));
+
+        #[cfg(windows)]
+        {
+            if has_ext && candidate.is_file() {
+                return Ok(candidate);
+            }
+            if !has_ext {
+                for ext in &exts {
+                    let candidate = dir.join(format!("{name}{ext}"));
+                    if candidate.is_file() {
+                        return Ok(candidate);
+                    }
+                }
                 if candidate.is_file() {
                     return Ok(candidate);
+                }
+            }
+        }
+
+        #[cfg(not(windows))]
+        {
+            if candidate.is_file() {
+                return Ok(candidate);
+            }
+            if !has_ext {
+                for ext in &exts {
+                    let candidate = dir.join(format!("{name}{ext}"));
+                    if candidate.is_file() {
+                        return Ok(candidate);
+                    }
                 }
             }
         }

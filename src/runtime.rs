@@ -1,6 +1,8 @@
 use crate::commands;
 use crate::parser::{Command as AstCommand, ListItem, Pipeline, RedirectKind, Word, parse};
 use crate::path::{is_explicit_path, shell_path};
+#[cfg(windows)]
+use crate::shebang;
 use anyhow::{Context, Result, bail};
 use std::collections::HashMap;
 use std::env;
@@ -359,7 +361,7 @@ impl Shell {
 
     fn external_command(&self, spec: &ExternalCommandSpec) -> Result<Command> {
         let program = resolve_program(&spec.name, &self.vars)?;
-        let mut command = Command::new(program);
+        let mut command = command_for_program(&program, &self.vars)?;
         command.args(&spec.argv);
         command.envs(&self.vars);
         command.envs(&spec.env_overlay);
@@ -458,6 +460,25 @@ struct ExternalCommandSpec {
     argv: Vec<String>,
     env_overlay: HashMap<String, String>,
     ast: AstCommand,
+}
+
+fn command_for_program(program: &Path, vars: &HashMap<String, String>) -> Result<Command> {
+    #[cfg(windows)]
+    if shebang::is_candidate(program)
+        && let Some(shebang) = shebang::read(program)?
+    {
+        let interpreter = resolve_program(&shebang.program, vars)
+            .with_context(|| format!("shebang interpreter not found: {}", shebang.program))?;
+        let mut command = Command::new(interpreter);
+        command.args(shebang.args);
+        command.arg(shebang::script_path(program));
+        return Ok(command);
+    }
+
+    #[cfg(not(windows))]
+    let _ = vars;
+
+    Ok(Command::new(program))
 }
 
 fn wait_status(child: Child) -> Result<i32> {
@@ -759,7 +780,7 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
-    fn cd_accepts_msys_drive_path() {
+    fn cd_accepts_slash_drive_path() {
         let current_dir = env::current_dir().unwrap();
         let drive = current_dir
             .display()

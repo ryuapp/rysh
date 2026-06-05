@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 pub(crate) fn shell_path(path: &str) -> PathBuf {
     #[cfg(windows)]
-    if let Some(path) = msys_drive_path(path) {
+    if let Some(path) = slash_drive_path(path) {
         return path;
     }
 
@@ -15,7 +15,7 @@ pub(crate) fn is_explicit_path(path: &str) -> bool {
 }
 
 #[cfg(windows)]
-fn msys_drive_path(path: &str) -> Option<PathBuf> {
+fn slash_drive_path(path: &str) -> Option<PathBuf> {
     let path = path.replace('\\', "/");
     let mut chars = path.chars();
 
@@ -59,13 +59,13 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
-    fn converts_msys_drive_root() {
+    fn converts_slash_drive_root() {
         assert_eq!(shell_path("/c"), PathBuf::from("C:\\"));
     }
 
     #[cfg(windows)]
     #[test]
-    fn converts_msys_drive_path() {
+    fn converts_slash_drive_path() {
         assert_eq!(
             shell_path("/c/Users/test"),
             PathBuf::from("C:\\Users\\test")

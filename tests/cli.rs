@@ -34,8 +34,8 @@ fn supports_command_substitution() {
 
 #[cfg(windows)]
 #[test]
-fn runs_script_from_msys_style_drive_path() {
-    let script = std::env::temp_dir().join("shell-msys-path-test.sh");
+fn runs_script_from_slash_drive_path() {
+    let script = std::env::temp_dir().join("shell-slash-drive-path-test.sh");
     std::fs::write(&script, "echo script\n").unwrap();
     let script = script.display().to_string().replace('\\', "/");
     let script = format!(
@@ -51,6 +51,27 @@ fn runs_script_from_msys_style_drive_path() {
 
     assert!(output.status.success());
     assert_eq!(String::from_utf8_lossy(&output.stdout), "script\n");
+}
+
+#[cfg(windows)]
+#[test]
+fn runs_script_using_shebang() {
+    let script = std::env::temp_dir().join("shell-shebang-test.ts");
+    let source = "#!/usr/bin/env node\r\nconsole.log(\"shebang works\");\r\n";
+    std::fs::write(&script, source).unwrap();
+    let script = script.display().to_string().replace('\\', "/");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_shell"))
+        .args(["-c", &format!("\"{script}\"")])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "shebang works\n");
 }
 
 #[test]

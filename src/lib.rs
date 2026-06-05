@@ -2,6 +2,8 @@ mod commands;
 mod parser;
 mod path;
 mod runtime;
+#[cfg(windows)]
+mod shebang;
 
 pub use runtime::{RunOptions, Shell};
 
